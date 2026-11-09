@@ -203,7 +203,7 @@
                     const partes = data.split('_');
                     const [ano, mes, dia] = partes[0].split('-');
                     const nomeTurno = partes[1] === 'T1' ? 'Turno 1 (03:00 - 13:40)' : 'Turno 2 (13:40 - 03:00)';
-                    option.text = `${dia}/${mes}/${ano} - ${nomeTurno}`;
+                    option.text = `${dia}/${mes}/${ano} ${nomeTurno}`;
                     select.appendChild(option);
                 }
             });
@@ -245,7 +245,9 @@
                 let frangosHora = Number(dadosDoDia.Frangos_Hora) || 0;
                 let contHora = 0;
 
-                const horaAtual = new Date().getHours().toString().padStart(2, '0');
+                const horaAtual = dadosDoDia.ultima_atualizacao
+                    ? dadosDoDia.ultima_atualizacao.split(':')[0].padStart(2, '0')
+                    : new Date().getHours().toString().padStart(2, '0');
 
                 if (dadosDoDia.logs) {
                     Object.values(dadosDoDia.logs).forEach(log => {
@@ -277,8 +279,8 @@
                         <h3 style="margin-bottom: 15px;">Taxa de Contaminação (${horaAtual}h)</h3>
                         <svg viewBox="0 0 36 36" class="circular-chart">
                             <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            <path class="circle" stroke-dasharray="${pct.toFixed(1)}, 100" stroke="${corGrafico}" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            <text x="18" y="18" class="percentage">${pct.toFixed(1)}%</text>
+                            <path class="circle" stroke-dasharray="${pct.toFixed(2)}, 100" stroke="${corGrafico}" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            <text x="18" y="18" class="percentage">${pct.toFixed(2).replace('.', ',')}%</text>
                             <text x="18" y="24" class="sub-text">${contHora} / ${frangosHora}</text>
                         </svg>
                     </div>
