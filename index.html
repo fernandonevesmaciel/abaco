@@ -245,10 +245,8 @@
                 let frangosHora = Number(dadosDoDia.Frangos_Hora) || 0;
                 let contHora = 0;
 
-                // Pega a hora atual no formato "HH" (ex: "10")
                 const horaAtual = new Date().getHours().toString().padStart(2, '0');
 
-                // Soma apenas os logs que aconteceram dentro da hora atual
                 if (dadosDoDia.logs) {
                     Object.values(dadosDoDia.logs).forEach(log => {
                         if (log.hora && log.hora.startsWith(horaAtual + ':')) {
