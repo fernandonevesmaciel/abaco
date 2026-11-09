@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoramento contaminações </title>
+    <title>Monitoramento contaminações</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body {
@@ -152,7 +152,7 @@
 <body>
     <div class="container">
         <h1>Painel do Abatedouro</h1>
-        <p class="subtitle">Monitoramento em Tempo Real - DB38</p>
+        <p class="subtitle">Monitoramento em Tempo Real - PCC-1B</p>
 
         <div class="barra-topo">
             <div>
@@ -209,12 +209,22 @@
             });
 
             if (primeiraCarga && select.options.length > 0) {
-                select.value = select.options[0].value; primeiraCarga = false;
+                select.value = select.options[0].value;
+                primeiraCarga = false;
             } else if ([...select.options].some(o => o.value === selecionado)) {
                 select.value = selecionado;
             } else if (select.options.length > 0) {
                 select.value = select.options[0].value;
             }
+        }
+
+        function formatarNome(nome) {
+            if (!nome) return '';
+            const limpo = nome.toLowerCase().trim();
+            if (limpo === 'contaminacao' || limpo === 'contaminação' || limpo === 'contaminacoes' || limpo === 'contaminações') {
+                return 'Contaminação Biliar + Gastrointestinal';
+            }
+            return nome;
         }
 
         function renderizarTela() {
@@ -232,17 +242,28 @@
                     </div>
                 `;
 
-                let frangosHora = 0;
+                let frangosHora = Number(dadosDoDia.Frangos_Hora) || 0;
                 let contHora = 0;
 
+                // Pega a hora atual no formato "HH" (ex: "10")
+                const horaAtual = new Date().getHours().toString().padStart(2, '0');
+
+                // Soma apenas os logs que aconteceram dentro da hora atual
+                if (dadosDoDia.logs) {
+                    Object.values(dadosDoDia.logs).forEach(log => {
+                        if (log.hora && log.hora.startsWith(horaAtual + ':')) {
+                            contHora += Number(log.quantidade) || 1;
+                        }
+                    });
+                }
+
                 for (const [chave, valor] of Object.entries(dadosDoDia)) {
-                    if (chave === 'Frangos_Hora') { frangosHora = Number(valor) || 0; continue; }
-                    if (chave === 'contaminacao') { contHora = Number(valor) || 0; }
+                    if (chave === 'Frangos_Hora') continue;
 
                     if (chave !== 'ultima_atualizacao' && chave !== 'logs' && chave !== 'resumo') {
                         container.innerHTML += `
                             <div class="card">
-                                <h3>${chave}</h3>
+                                <h3>${formatarNome(chave)}</h3>
                                 <div class="valor">${valor}</div>
                             </div>
                         `;
@@ -255,7 +276,7 @@
 
                 container.innerHTML += `
                     <div class="card" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                        <h3 style="margin-bottom: 15px;">Taxa de Contaminação</h3>
+                        <h3 style="margin-bottom: 15px;">Taxa de Contaminação (${horaAtual}h)</h3>
                         <svg viewBox="0 0 36 36" class="circular-chart">
                             <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                             <path class="circle" stroke-dasharray="${pct.toFixed(1)}, 100" stroke="${corGrafico}" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
@@ -288,7 +309,7 @@
                     totalGeral += Number(valor) || 0;
                     linhasTabelaResumo += `
                         <tr style="page-break-inside: avoid;">
-                            <td style="padding: 10px; border: 1px solid #ddd; font-size: 14px;">${chave}</td>
+                            <td style="padding: 10px; border: 1px solid #ddd; font-size: 14px;">${formatarNome(chave)}</td>
                             <td style="padding: 10px; border: 1px solid #ddd; font-size: 14px; text-align: center;">${valor}</td>
                         </tr>
                     `;
@@ -306,7 +327,7 @@
                     linhasTabelaLogs += `
                         <tr style="page-break-inside: avoid;">
                             <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 13px;">${log.hora}</td>
-                            <td style="padding: 8px; border: 1px solid #ddd; font-size: 13px;">${log.doenca}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd; font-size: 13px;">${formatarNome(log.doenca)}</td>
                             <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 13px;">${log.frangos_hora || 0}</td>
                         </tr>
                     `;
@@ -359,13 +380,46 @@
             }
 
             const relatorioHTML = `
-                <div style="width: 100%; max-width: 800px; padding: 20px; font-family: 'Helvetica', 'Arial', sans-serif; color: #333; background: white;">
-                    <div style="text-align: center; border-bottom: 3px solid #b32400; padding-bottom: 15px; margin-bottom: 20px;">
-                        <h2 style="margin: 0; color: #b32400; font-size: 24px;">RELATÓRIO DE OCORRÊNCIAS - DB38</h2>
-                        <h3 style="margin: 5px 0 0 0; color: #666; font-size: 16px; font-weight: normal;">Monitoramento de Contaminações</h3>
-                    </div>
+                <div style="width: 100%; box-sizing: border-box; padding: 0; font-family: 'Helvetica', 'Arial', sans-serif; color: #000; background: white;">
                     
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 14px;">
+                    <!-- Cabeçalho Institucional (Padrão PAC) -->
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; border: 1px solid #000;">
+                        <tr>
+                            <td style="width: 18%; border: 1px solid #000; text-align: center; vertical-align: middle; padding: 8px;">
+                                <div style="font-family: Arial, sans-serif; font-weight: bold; font-style: italic; font-size: 20px; color: #1b369c; line-height: 1;">
+                                    Pioneiro
+                                </div>
+                                <div style="font-family: Arial, sans-serif; font-size: 9px; color: #e86c1f; text-align: right; padding-right: 8px; font-weight: bold;">
+                                    Alimentos
+                                </div>
+                            </td>
+                            <td style="width: 66%; border: 1px solid #000; text-align: center; vertical-align: middle; padding: 6px 10px; line-height: 1.35;">
+                                <div style="font-size: 12px; font-weight: bold;">FRANGOS PIONEIRO – INDÚSTRIA E COMÉRCIO DE ALIMENTOS LTDA.</div>
+                                <div style="font-size: 10px;">RODOVIA PARIGOT DE SOUZA, KM 302,8 – PR 092 – JOAQUIM TÁVORA - PR CEP: 86455-000</div>
+                                <div style="font-size: 10px;">ABATEDOURO FRIGORÍFICO – SIF 1372</div>
+                            </td>
+                            <td style="width: 16%; border: 1px solid #000; text-align: center; vertical-align: middle; padding: 6px; font-size: 10px; line-height: 1.4;">
+                                <div>PAC 10</div>
+                                <div>PAC 10.07</div>
+                                <div>N° Versão: 41</div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #000;">
+                        <tr>
+                            <td style="border: 1px solid #000; text-align: center; padding: 4px; font-size: 11px; font-weight: bold; background-color: #d9e1f2;">
+                                PROGRAMA DE AUTOCONTROLE (PAC) - PROCEDIMENTOS SANITÁRIOS DAS OPERAÇÕES
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #000; text-align: center; padding: 4px; font-size: 11px;">
+                                MONITORAMENTO CONTAMINAÇÕES EM CARCAÇAS
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 13px; color: #333;">
                         <div><strong>Data do Relatório:</strong> ${dataFormatada}</div>
                         <div><strong>Última Atualização:</strong> ${horaFormatada}</div>
                     </div>
@@ -419,7 +473,7 @@
             `;
 
             const opcoes = {
-                margin: 10, filename: `Relatorio_Abatedouro_DB38_${dia}-${mes}-${ano}_${nomeTurno}.pdf`,
+                margin: 10, filename: `Relatorio_Abatedouro_PCC-1B_${dia}-${mes}-${ano}_${nomeTurno}.pdf`,
                 image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { avoid: 'tr' }
