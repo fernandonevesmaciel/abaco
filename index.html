@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoramento contaminações </title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            text-align: center;
+            color: #b32400;
+            margin-bottom: 5px;
+        }
+
+        p.subtitle {
+            text-align: center;
+            color: #777;
+            margin-top: 0;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .barra-topo {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f9f9f9;
+            padding: 15px 20px;
+            border-radius: 8px;
+            border-left: 5px solid #b32400;
+            margin-bottom: 30px;
+        }
+
+        select {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            outline: none;
+        }
+
+        .btn-pdf {
+            background-color: #b32400;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-pdf:hover {
+            background-color: #8a1c00;
+            transform: translateY(-2px);
+        }
+
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background-color: #fff;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+            border-top: 4px solid #b32400;
+        }
+
+        .card.hora {
+            border-top: 4px solid #444;
+            grid-column: 1 / -1;
+        }
+
+        .card h3 {
+            margin: 0;
+            color: #555;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card .valor {
+            font-size: 40px;
+            font-weight: bold;
+            color: #b32400;
+            margin-top: 15px;
+        }
+
+        .card.hora .valor {
+            color: #444;
+            font-size: 28px;
+        }
+
+        .circular-chart {
+            display: block;
+            margin: 10px auto;
+            width: 120px;
+            height: 120px;
+        }
+
+        .circle-bg {
+            fill: none;
+            stroke: #eee;
+            stroke-width: 3.8;
+        }
+
+        .circle {
+            fill: none;
+            stroke-width: 2.8;
+            stroke-linecap: round;
+            transition: stroke-dasharray 1s ease-out, stroke 0.5s ease;
+        }
+
+        .percentage {
+            fill: #333;
+            font-size: 8px;
+            font-weight: bold;
+            text-anchor: middle;
+        }
+
+        .sub-text {
+            fill: #777;
+            font-size: 3px;
+            text-anchor: middle;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Painel do Abatedouro</h1>
+        <p class="subtitle">Monitoramento em Tempo Real - DB38</p>
+
+        <div class="barra-topo">
+            <div>
+                <label for="dataSelect" style="color: #444; font-weight: bold;">Filtro: </label>
+                <select id="dataSelect" onchange="renderizarTela()"></select>
+            </div>
+
+            <div>
+                <button class="btn-pdf" onclick="gerarPDF()">📄 Baixar PDF</button>
+            </div>
+        </div>
+
+        <div class="grid-cards" id="containerCards"></div>
+    </div>
+
+    <script>
+        const FIREBASE_URL_DADOS = 'https://abaco-62f10-default-rtdb.firebaseio.com/.json';
+
+        let dadosGlobais = {};
+        let primeiraCarga = true;
+
+        async function inicializarSite() {
+            carregarDados();
+            setInterval(carregarDados, 5000);
+        }
+
+        async function carregarDados() {
+            try {
+                const response = await fetch(`${FIREBASE_URL_DADOS}?t=${new Date().getTime()}`);
+                dadosGlobais = await response.json();
+                if (dadosGlobais) {
+                    atualizarSeletorDeDatas();
+                    renderizarTela();
+                }
+            } catch (error) { console.error(error); }
+        }
+
+        function atualizarSeletorDeDatas() {
+            const select = document.getElementById('dataSelect');
+            const selecionado = select.value;
+            const datas = Object.keys(dadosGlobais).sort((a, b) => b.localeCompare(a));
+            select.innerHTML = '';
+
+            datas.forEach(data => {
+                if (data.includes('_')) {
+                    const option = document.createElement('option');
+                    option.value = data;
+                    const partes = data.split('_');
+                    const [ano, mes, dia] = partes[0].split('-');
+                    const nomeTurno = partes[1] === 'T1' ? 'Turno 1 (03:00 - 13:40)' : 'Turno 2 (13:40 - 03:00)';
+                    option.text = `${dia}/${mes}/${ano} - ${nomeTurno}`;
+                    select.appendChild(option);
+                }
+            });
+
+            if (primeiraCarga && select.options.length > 0) {
+                select.value = select.options[0].value; primeiraCarga = false;
+            } else if ([...select.options].some(o => o.value === selecionado)) {
+                select.value = selecionado;
+            } else if (select.options.length > 0) {
+                select.value = select.options[0].value;
+            }
+        }
+
+        function renderizarTela() {
+            const data = document.getElementById('dataSelect').value;
+            if (!data) return;
+            const dadosDoDia = dadosGlobais[data];
+            const container = document.getElementById('containerCards');
+            container.innerHTML = '';
+
+            if (dadosDoDia) {
+                container.innerHTML += `
+                    <div class="card hora">
+                        <h3>Última Atualização</h3>
+                        <div class="valor">${dadosDoDia.ultima_atualizacao || '--:--:--'}</div>
+                    </div>
+                `;
+
+                let frangosHora = 0;
+                let contHora = 0;
+
+                for (const [chave, valor] of Object.entries(dadosDoDia)) {
+                    if (chave === 'Frangos_Hora') { frangosHora = Number(valor) || 0; continue; }
+                    if (chave === 'contaminacao') { contHora = Number(valor) || 0; }
+
+                    if (chave !== 'ultima_atualizacao' && chave !== 'logs' && chave !== 'resumo') {
+                        container.innerHTML += `
+                            <div class="card">
+                                <h3>${chave}</h3>
+                                <div class="valor">${valor}</div>
+                            </div>
+                        `;
+                    }
+                }
+
+                let pct = 0;
+                if (frangosHora > 0) { pct = (contHora / frangosHora) * 100; }
+                let corGrafico = pct <= 10 ? '#28a745' : '#b32400';
+
+                container.innerHTML += `
+                    <div class="card" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <h3 style="margin-bottom: 15px;">Taxa de Contaminação</h3>
+                        <svg viewBox="0 0 36 36" class="circular-chart">
+                            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            <path class="circle" stroke-dasharray="${pct.toFixed(1)}, 100" stroke="${corGrafico}" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            <text x="18" y="18" class="percentage">${pct.toFixed(1)}%</text>
+                            <text x="18" y="24" class="sub-text">${contHora} / ${frangosHora}</text>
+                        </svg>
+                    </div>
+                `;
+            }
+        }
+
+        function gerarPDF() {
+            const dataEscolhida = document.getElementById('dataSelect').value;
+            if (!dataEscolhida || !dadosGlobais[dataEscolhida]) {
+                alert("Sem dados para gerar relatório."); return;
+            }
+
+            const dadosDoDia = dadosGlobais[dataEscolhida];
+            const partes = dataEscolhida.split('_');
+            const [ano, mes, dia] = partes[0].split('-');
+            const nomeTurno = partes[1] === 'T1' ? 'Turno 1 (03:00 - 13:40)' : 'Turno 2 (13:40 - 03:00)';
+            const dataFormatada = `${dia}/${mes}/${ano} (${nomeTurno})`;
+            const horaFormatada = dadosDoDia.ultima_atualizacao || '--:--';
+
+            let linhasTabelaResumo = '';
+            let totalGeral = 0;
+
+            for (const [chave, valor] of Object.entries(dadosDoDia)) {
+                if (chave !== 'ultima_atualizacao' && chave !== 'logs' && chave !== 'resumo' && chave !== 'Frangos_Hora') {
+                    totalGeral += Number(valor) || 0;
+                    linhasTabelaResumo += `
+                        <tr style="page-break-inside: avoid;">
+                            <td style="padding: 10px; border: 1px solid #ddd; font-size: 14px;">${chave}</td>
+                            <td style="padding: 10px; border: 1px solid #ddd; font-size: 14px; text-align: center;">${valor}</td>
+                        </tr>
+                    `;
+                }
+            }
+
+            let linhasTabelaLogs = '';
+            let linhasTabelaHora = '';
+
+            if (dadosDoDia.logs) {
+                const arrayLogs = Object.values(dadosDoDia.logs).sort((a, b) => a.hora.localeCompare(b.hora));
+                let resumoPorHora = {};
+
+                arrayLogs.forEach(log => {
+                    linhasTabelaLogs += `
+                        <tr style="page-break-inside: avoid;">
+                            <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 13px;">${log.hora}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd; font-size: 13px;">${log.doenca}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 13px;">${log.frangos_hora || 0}</td>
+                        </tr>
+                    `;
+
+                    let horaBase = log.hora.split(':')[0];
+                    let qtd = log.quantidade || 1;
+                    let vel = Number(log.frangos_hora || 0);
+
+                    if (!resumoPorHora[horaBase]) {
+                        resumoPorHora[horaBase] = { contaminacoes: 0, somaVelocidade: 0, contagemEventos: 0 };
+                    }
+
+                    resumoPorHora[horaBase].contaminacoes += qtd;
+                    if (vel > 0) {
+                        resumoPorHora[horaBase].somaVelocidade += vel;
+                        resumoPorHora[horaBase].contagemEventos += 1;
+                    }
+                });
+
+                for (let horaStr of Object.keys(resumoPorHora).sort()) {
+                    let dadosHora = resumoPorHora[horaStr];
+                    let horaAtualNum = parseInt(horaStr);
+                    let horaSeguinte = (horaAtualNum + 1).toString().padStart(2, '0');
+                    let faixaHorario = `Das ${horaStr}:00 às ${horaSeguinte}:00`;
+
+                    let mediaFrangos = dadosHora.contagemEventos > 0
+                        ? Math.round(dadosHora.somaVelocidade / dadosHora.contagemEventos)
+                        : 0;
+
+                    let porcentagem = mediaFrangos > 0
+                        ? ((dadosHora.contaminacoes / mediaFrangos) * 100).toFixed(2).replace('.', ',')
+                        : "0,00";
+
+                    let corPorcentagem = parseFloat(porcentagem.replace(',', '.')) > 10 ? '#b32400' : '#28a745';
+
+                    linhasTabelaHora += `
+                        <tr style="page-break-inside: avoid;">
+                            <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 13px;">${faixaHorario}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 13px;">${dadosHora.contaminacoes}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 13px;">${mediaFrangos}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 13px; font-weight: bold; color: ${corPorcentagem};">${porcentagem}%</td>
+                        </tr>
+                    `;
+                }
+            }
+
+            if (linhasTabelaLogs === '') {
+                linhasTabelaLogs = '<tr><td colspan="3" style="padding: 15px; text-align: center; color: #777;">Nenhuma ocorrência registrada neste turno.</td></tr>';
+                linhasTabelaHora = '<tr><td colspan="4" style="padding: 15px; text-align: center; color: #777;">Sem dados para gerar média por hora.</td></tr>';
+            }
+
+            const relatorioHTML = `
+                <div style="width: 100%; max-width: 800px; padding: 20px; font-family: 'Helvetica', 'Arial', sans-serif; color: #333; background: white;">
+                    <div style="text-align: center; border-bottom: 3px solid #b32400; padding-bottom: 15px; margin-bottom: 20px;">
+                        <h2 style="margin: 0; color: #b32400; font-size: 24px;">RELATÓRIO DE OCORRÊNCIAS - DB38</h2>
+                        <h3 style="margin: 5px 0 0 0; color: #666; font-size: 16px; font-weight: normal;">Monitoramento de Contaminações</h3>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 14px;">
+                        <div><strong>Data do Relatório:</strong> ${dataFormatada}</div>
+                        <div><strong>Última Atualização:</strong> ${horaFormatada}</div>
+                    </div>
+
+                    <h4 style="margin-bottom: 10px; color: #444;">1. Resumo de Contaminações</h4>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                        <thead>
+                            <tr>
+                                <th style="background-color: #b32400; color: white; padding: 10px; font-size: 14px; border: 1px solid #991f00; text-align: left; width: 70%;">Tipo de Contaminação</th>
+                                <th style="background-color: #b32400; color: white; padding: 10px; font-size: 14px; border: 1px solid #991f00; text-align: center; width: 30%;">Total Detectado</th>
+                            </tr>
+                        </thead>
+                        <tbody>${linhasTabelaResumo}</tbody>
+                        <tfoot>
+                            <tr style="font-weight: bold; background-color: #eaeaea; page-break-inside: avoid;">
+                                <td style="text-align: right; padding: 10px; border-top: 2px solid #666; font-size: 15px;">TOTAL GERAL:</td>
+                                <td style="text-align: center; padding: 10px; border-top: 2px solid #666; font-size: 15px; color: #b32400;">${totalGeral}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+
+                    <h4 style="margin-bottom: 10px; color: #444;">2. Agrupamento por Hora</h4>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                        <thead>
+                            <tr style="page-break-inside: avoid;">
+                                <th style="background-color: #444; color: white; padding: 8px; font-size: 13px; border: 1px solid #333; text-align: center; width: 30%;">Faixa de Horário</th>
+                                <th style="background-color: #444; color: white; padding: 8px; font-size: 13px; border: 1px solid #333; text-align: center; width: 25%;">Total Contaminado</th>
+                                <th style="background-color: #444; color: white; padding: 8px; font-size: 13px; border: 1px solid #333; text-align: center; width: 25%;">Média Frangos/Hora</th>
+                                <th style="background-color: #444; color: white; padding: 8px; font-size: 13px; border: 1px solid #333; text-align: center; width: 20%;">Taxa (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>${linhasTabelaHora}</tbody>
+                    </table>
+
+                    <h4 style="margin-bottom: 10px; color: #444;">3. Histórico Detalhado (Log de Eventos)</h4>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="page-break-inside: avoid;">
+                                <th style="background-color: #444; color: white; padding: 8px; font-size: 13px; border: 1px solid #333; text-align: center; width: 20%;">Hora</th>
+                                <th style="background-color: #444; color: white; padding: 8px; font-size: 13px; border: 1px solid #333; text-align: left; width: 55%;">Contaminação Registrada</th>
+                                <th style="background-color: #444; color: white; padding: 8px; font-size: 13px; border: 1px solid #333; text-align: center; width: 25%;">Frangos por Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody>${linhasTabelaLogs}</tbody>
+                    </table>
+                    
+                    <div style="margin-top: 40px; text-align: center; font-size: 11px; color: #888; page-break-inside: avoid;">
+                        Documento gerado automaticamente pelo Sistema Supervisório.
+                    </div>
+                </div>
+            `;
+
+            const opcoes = {
+                margin: 10, filename: `Relatorio_Abatedouro_DB38_${dia}-${mes}-${ano}_${nomeTurno}.pdf`,
+                image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { avoid: 'tr' }
+            };
+
+            html2pdf().set(opcoes).from(relatorioHTML).save();
+        }
+
+        window.onload = inicializarSite;
+    </script>
+</body>
+
+</html>
