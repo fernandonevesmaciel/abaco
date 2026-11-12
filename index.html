@@ -300,7 +300,7 @@
              ========================================== -->
         <div class="container abaco-2">
             <h1>Painel do Abatedouro - Ábaco 2</h1>
-            <p class="subtitle">Monitoramento em Tempo Real - Offset 72</p>
+            <p class="subtitle">Monitoramento em Tempo Real - PCC-1B - DIF</p>
 
             <div class="barra-topo">
                 <div class="filtro-grupo">
@@ -333,8 +333,8 @@
                 primeiraCarga: true
             },
             2: {
-                tituloRelatorio: 'Offset 72 (Ábaco 2)',
-                arquivoSufixo: 'Offset72',
+                tituloRelatorio: 'PCC-1B - DIF',
+                arquivoSufixo: 'PCC-1B - DIF',
                 corRGB: [27, 54, 156],
                 noFirebase: 'abaco_2',
                 primeiraCarga: true
@@ -378,8 +378,11 @@
 
             select.innerHTML = '';
 
+            // Aceita estritamente chaves no padrão AAAA-MM-DD_T1 ou AAAA-MM-DD_T2 (ignora "abaco_2" e outros nós)
+            const regexChaveTurno = /^\d{4}-\d{2}-\d{2}_T[12]$/;
+
             datas.forEach(data => {
-                if (data.includes('_')) {
+                if (regexChaveTurno.test(data)) {
                     const option = document.createElement('option');
                     option.value = data;
                     const partes = data.split('_');
