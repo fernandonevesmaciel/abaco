@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoramento contaminações</title>
+    <title>Monitoramento Contaminações - Duplo Ábaco</title>
     <!-- Bibliotecas nativas para geração de PDF vetorial sem limite de páginas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -19,64 +19,94 @@
             min-height: calc(100vh - 40px);
         }
 
+        .painel-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            align-items: stretch;
+            gap: 28px;
+            max-width: 1280px;
+            width: 100%;
+            margin: auto; /* Centraliza tanto na horizontal quanto na vertical */
+        }
+
         .container {
-            max-width: 900px;
             width: 100%;
             box-sizing: border-box;
-            margin: 0 auto;
             background: #fff;
-            padding: 30px;
+            padding: 26px;
             border-radius: 12px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container.abaco-1 {
+            border-top: 5px solid #b32400;
+        }
+
+        .container.abaco-2 {
+            border-top: 5px solid #1b369c;
         }
 
         h1 {
             text-align: center;
             color: #b32400;
+            margin-top: 0;
             margin-bottom: 5px;
+            font-size: 23px;
+        }
+
+        .container.abaco-2 h1 {
+            color: #1b369c;
         }
 
         p.subtitle {
             text-align: center;
             color: #777;
             margin-top: 0;
-            margin-bottom: 30px;
-            font-size: 16px;
+            margin-bottom: 22px;
+            font-size: 14px;
         }
 
         .barra-topo {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
             background-color: #f9f9f9;
-            padding: 15px 20px;
+            padding: 12px 15px;
             border-radius: 8px;
             border-left: 5px solid #b32400;
-            margin-bottom: 30px;
+            margin-bottom: 22px;
+        }
+
+        .container.abaco-2 .barra-topo {
+            border-left-color: #1b369c;
         }
 
         .filtro-grupo {
             display: flex;
             align-items: center;
             gap: 8px;
+            flex: 1;
         }
 
         select {
-            padding: 10px;
-            font-size: 16px;
+            padding: 9px;
+            font-size: 14px;
             border-radius: 5px;
             border: 1px solid #ccc;
             outline: none;
             background-color: #fff;
+            width: 100%;
         }
 
         .btn-pdf {
             background-color: #b32400;
             color: white;
             border: none;
-            padding: 12px 20px;
-            font-size: 15px;
+            padding: 10px 15px;
+            font-size: 14px;
             font-weight: bold;
             border-radius: 5px;
             cursor: pointer;
@@ -89,52 +119,74 @@
             transform: translateY(-2px);
         }
 
+        .container.abaco-2 .btn-pdf {
+            background-color: #1b369c;
+        }
+
+        .container.abaco-2 .btn-pdf:hover {
+            background-color: #12246b;
+        }
+
+        /* 2 colunas simétricas para preencher toda a largura interna de cada ábaco */
         .grid-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            flex: 1;
         }
 
         .card {
             background-color: #fff;
             border: 1px solid #eee;
             border-radius: 10px;
-            padding: 25px;
+            padding: 20px 15px;
             text-align: center;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
             border-top: 4px solid #b32400;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container.abaco-2 .card {
+            border-top-color: #1b369c;
         }
 
         .card.hora {
-            border-top: 4px solid #444;
+            border-top: 4px solid #444 !important;
             grid-column: 1 / -1;
         }
 
         .card h3 {
             margin: 0;
             color: #555;
-            font-size: 16px;
+            font-size: 13px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.8px;
         }
 
         .card .valor {
-            font-size: 40px;
+            font-size: 38px;
             font-weight: bold;
             color: #b32400;
-            margin-top: 15px;
+            margin-top: 12px;
+        }
+
+        .container.abaco-2 .card .valor {
+            color: #1b369c;
         }
 
         .card.hora .valor {
-            color: #444;
-            font-size: 28px;
+            color: #444 !important;
+            font-size: 26px;
         }
 
         .circular-chart {
             display: block;
-            margin: 10px auto;
-            width: 120px;
-            height: 120px;
+            margin: 8px auto 0;
+            width: 115px;
+            height: 115px;
         }
 
         .circle-bg {
@@ -163,18 +215,32 @@
             text-anchor: middle;
         }
 
+        .sem-dados {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #888;
+            padding: 30px;
+            font-size: 15px;
+        }
+
         footer {
-            margin-top: auto;
-            padding-top: 25px;
+            padding-top: 20px;
             padding-bottom: 5px;
             text-align: center;
             color: #777;
             font-size: 14px;
         }
 
-        /* ==========================================
-           RESPONSIVIDADE PARA CELULARES
-           ========================================== */
+        @media (max-width: 1050px) {
+            .painel-wrapper {
+                grid-template-columns: 1fr;
+                max-width: 650px;
+            }
+        }
+
         @media (max-width: 600px) {
             body {
                 padding: 10px;
@@ -183,91 +249,72 @@
 
             .container {
                 padding: 18px 15px;
-                border-radius: 10px;
-            }
-
-            h1 {
-                font-size: 22px;
-            }
-
-            p.subtitle {
-                font-size: 14px;
-                margin-bottom: 20px;
             }
 
             .barra-topo {
                 flex-direction: column;
                 align-items: stretch;
-                padding: 14px;
-                gap: 12px;
-                margin-bottom: 20px;
             }
 
             .filtro-grupo {
                 flex-direction: column;
                 align-items: stretch;
-                gap: 6px;
-            }
-
-            select {
-                width: 100%;
-                font-size: 15px;
-                padding: 10px 8px;
             }
 
             .btn-pdf {
                 width: 100%;
-                padding: 12px;
-                font-size: 15px;
             }
 
             .grid-cards {
                 grid-template-columns: 1fr;
-                gap: 14px;
-            }
-
-            .card {
-                padding: 18px 15px;
-            }
-
-            .card h3 {
-                font-size: 14px;
-            }
-
-            .card .valor {
-                font-size: 34px;
-                margin-top: 10px;
-            }
-
-            .card.hora .valor {
-                font-size: 24px;
-            }
-
-            .circular-chart {
-                width: 110px;
-                height: 110px;
             }
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <h1>Painel do Abatedouro</h1>
-        <p class="subtitle">Monitoramento em Tempo Real - PCC-1B</p>
+    <div class="painel-wrapper">
+        <!-- ==========================================
+             ÁBACO 1: PRINCIPAL (OFFSET 2)
+             ========================================== -->
+        <div class="container abaco-1">
+            <h1>Painel do Abatedouro - Ábaco 1</h1>
+            <p class="subtitle">Monitoramento em Tempo Real - PCC-1B</p>
 
-        <div class="barra-topo">
-            <div class="filtro-grupo">
-                <label for="dataSelect" style="color: #444; font-weight: bold;">Filtro:</label>
-                <select id="dataSelect" onchange="renderizarTela()"></select>
+            <div class="barra-topo">
+                <div class="filtro-grupo">
+                    <label for="dataSelect_1" style="color: #444; font-weight: bold;">Filtro:</label>
+                    <select id="dataSelect_1" onchange="renderizarTela(1)"></select>
+                </div>
+
+                <div>
+                    <button class="btn-pdf" onclick="gerarPDF(1)">📄 Baixar PDF</button>
+                </div>
             </div>
 
-            <div>
-                <button class="btn-pdf" onclick="gerarPDF()">📄 Baixar PDF</button>
-            </div>
+            <div class="grid-cards" id="containerCards_1"></div>
         </div>
 
-        <div class="grid-cards" id="containerCards"></div>
+        <!-- ==========================================
+             ÁBACO 2: SECUNDÁRIO (OFFSET 72)
+             ========================================== -->
+        <div class="container abaco-2">
+            <h1>Painel do Abatedouro - Ábaco 2</h1>
+            <p class="subtitle">Monitoramento em Tempo Real - Offset 72</p>
+
+            <div class="barra-topo">
+                <div class="filtro-grupo">
+                    <label for="dataSelect_2" style="color: #444; font-weight: bold;">Filtro:</label>
+                    <select id="dataSelect_2" onchange="renderizarTela(2)"></select>
+                </div>
+
+                <div>
+                    <button class="btn-pdf" onclick="gerarPDF(2)">📄 Baixar PDF</button>
+                </div>
+            </div>
+
+            <div class="grid-cards" id="containerCards_2"></div>
+        </div>
     </div>
 
     <footer>
@@ -277,29 +324,58 @@
     <script>
         const FIREBASE_URL_DADOS = 'https://abaco-62f10-default-rtdb.firebaseio.com/.json';
 
+        const CONFIG_PAINEIS = {
+            1: {
+                tituloRelatorio: 'PCC-1B (Ábaco 1)',
+                arquivoSufixo: 'PCC-1B',
+                corRGB: [179, 36, 0],
+                noFirebase: null,
+                primeiraCarga: true
+            },
+            2: {
+                tituloRelatorio: 'Offset 72 (Ábaco 2)',
+                arquivoSufixo: 'Offset72',
+                corRGB: [27, 54, 156],
+                noFirebase: 'abaco_2',
+                primeiraCarga: true
+            }
+        };
+
         let dadosGlobais = {};
-        let primeiraCarga = true;
 
         async function inicializarSite() {
-            carregarDados();
+            await carregarDados();
             setInterval(carregarDados, 5000);
         }
 
         async function carregarDados() {
             try {
                 const response = await fetch(`${FIREBASE_URL_DADOS}?t=${new Date().getTime()}`);
-                dadosGlobais = await response.json();
-                if (dadosGlobais) {
-                    atualizarSeletorDeDatas();
-                    renderizarTela();
+                const json = await response.json();
+                if (json) {
+                    dadosGlobais = json;
+                    [1, 2].forEach(id => {
+                        atualizarSeletorDeDatas(id);
+                        renderizarTela(id);
+                    });
                 }
-            } catch (error) { console.error(error); }
+            } catch (error) {
+                console.error("Erro ao carregar Firebase:", error);
+            }
         }
 
-        function atualizarSeletorDeDatas() {
-            const select = document.getElementById('dataSelect');
+        function obterBaseTurnos(id) {
+            const no = CONFIG_PAINEIS[id].noFirebase;
+            if (!no) return dadosGlobais;
+            return dadosGlobais[no] || {};
+        }
+
+        function atualizarSeletorDeDatas(id) {
+            const select = document.getElementById(`dataSelect_${id}`);
             const selecionado = select.value;
-            const datas = Object.keys(dadosGlobais).sort((a, b) => b.localeCompare(a));
+            const baseTurnos = obterBaseTurnos(id);
+            const datas = Object.keys(baseTurnos).sort((a, b) => b.localeCompare(a));
+
             select.innerHTML = '';
 
             datas.forEach(data => {
@@ -314,9 +390,9 @@
                 }
             });
 
-            if (primeiraCarga && select.options.length > 0) {
+            if (CONFIG_PAINEIS[id].primeiraCarga && select.options.length > 0) {
                 select.value = select.options[0].value;
-                primeiraCarga = false;
+                CONFIG_PAINEIS[id].primeiraCarga = false;
             } else if ([...select.options].some(o => o.value === selecionado)) {
                 select.value = selecionado;
             } else if (select.options.length > 0) {
@@ -333,78 +409,85 @@
             return nome;
         }
 
-        function renderizarTela() {
-            const data = document.getElementById('dataSelect').value;
-            if (!data) return;
-            const dadosDoDia = dadosGlobais[data];
-            const container = document.getElementById('containerCards');
+        function renderizarTela(id) {
+            const data = document.getElementById(`dataSelect_${id}`).value;
+            const container = document.getElementById(`containerCards_${id}`);
+            const baseTurnos = obterBaseTurnos(id);
+
+            if (!data || !baseTurnos[data]) {
+                container.innerHTML = `<div class="sem-dados">Aguardando registros para este ábaco...</div>`;
+                return;
+            }
+
+            const dadosDoDia = baseTurnos[data];
             container.innerHTML = '';
 
-            if (dadosDoDia) {
-                container.innerHTML += `
-                    <div class="card hora">
-                        <h3>Última Atualização</h3>
-                        <div class="valor">${dadosDoDia.ultima_atualizacao || '--:--:--'}</div>
-                    </div>
-                `;
+            container.innerHTML += `
+                <div class="card hora">
+                    <h3>Última Atualização</h3>
+                    <div class="valor">${dadosDoDia.ultima_atualizacao || '--:--:--'}</div>
+                </div>
+            `;
 
-                let frangosHora = Number(dadosDoDia.Frangos_Hora) || 0;
-                let contHora = 0;
+            const frangosHora = Number(dadosDoDia.Frangos_Hora ?? dadosGlobais[data]?.Frangos_Hora) || 0;
+            let contHora = 0;
 
-                const horaAtual = dadosDoDia.ultima_atualizacao
-                    ? dadosDoDia.ultima_atualizacao.split(':')[0].padStart(2, '0')
-                    : new Date().getHours().toString().padStart(2, '0');
+            const horaAtual = dadosDoDia.ultima_atualizacao
+                ? dadosDoDia.ultima_atualizacao.split(':')[0].padStart(2, '0')
+                : new Date().getHours().toString().padStart(2, '0');
 
-                if (dadosDoDia.logs) {
-                    Object.values(dadosDoDia.logs).forEach(log => {
-                        if (log.hora && log.hora.startsWith(horaAtual + ':')) {
-                            contHora += Number(log.quantidade) || 1;
-                        }
-                    });
-                }
-
-                for (const [chave, valor] of Object.entries(dadosDoDia)) {
-                    if (chave === 'Frangos_Hora') continue;
-
-                    if (chave !== 'ultima_atualizacao' && chave !== 'logs' && chave !== 'resumo') {
-                        container.innerHTML += `
-                            <div class="card">
-                                <h3>${formatarNome(chave)}</h3>
-                                <div class="valor">${valor}</div>
-                            </div>
-                        `;
+            if (dadosDoDia.logs) {
+                Object.values(dadosDoDia.logs).forEach(log => {
+                    if (log.hora && log.hora.startsWith(horaAtual + ':')) {
+                        contHora += Number(log.quantidade) || 1;
                     }
-                }
+                });
+            }
 
-                let pct = 0;
-                if (frangosHora > 0) { pct = (contHora / frangosHora) * 100; }
-                let corGrafico = pct <= 10 ? '#28a745' : '#b32400';
+            for (const [chave, valor] of Object.entries(dadosDoDia)) {
+                if (['Frangos_Hora', 'ultima_atualizacao', 'logs', 'resumo'].includes(chave)) continue;
 
                 container.innerHTML += `
-                    <div class="card" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                        <h3 style="margin-bottom: 15px;">Taxa de Contaminação (${horaAtual}h)</h3>
-                        <svg viewBox="0 0 36 36" class="circular-chart">
-                            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            <path class="circle" stroke-dasharray="${pct.toFixed(2)}, 100" stroke="${corGrafico}" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                            <text x="18" y="18" class="percentage">${pct.toFixed(2).replace('.', ',')}%</text>
-                            <text x="18" y="24" class="sub-text">${contHora} / ${frangosHora}</text>
-                        </svg>
+                    <div class="card">
+                        <h3>${formatarNome(chave)}</h3>
+                        <div class="valor">${valor}</div>
                     </div>
                 `;
             }
+
+            let pct = 0;
+            if (frangosHora > 0) {
+                pct = (contHora / frangosHora) * 100;
+            }
+            let corGrafico = pct <= 10 ? '#28a745' : '#b32400';
+
+            container.innerHTML += `
+                <div class="card">
+                    <h3 style="margin-bottom: 10px;">Taxa de Contaminação (${horaAtual}h)</h3>
+                    <svg viewBox="0 0 36 36" class="circular-chart">
+                        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path class="circle" stroke-dasharray="${Math.min(pct, 100).toFixed(2)}, 100" stroke="${corGrafico}" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <text x="18" y="18" class="percentage">${pct.toFixed(2).replace('.', ',')}%</text>
+                        <text x="18" y="24" class="sub-text">${contHora} / ${frangosHora}</text>
+                    </svg>
+                </div>
+            `;
         }
 
-        function gerarPDF() {
-            const dataEscolhida = document.getElementById('dataSelect').value;
-            if (!dataEscolhida || !dadosGlobais[dataEscolhida]) {
+        function gerarPDF(id) {
+            const dataEscolhida = document.getElementById(`dataSelect_${id}`).value;
+            const baseTurnos = obterBaseTurnos(id);
+
+            if (!dataEscolhida || !baseTurnos[dataEscolhida]) {
                 alert("Sem dados para gerar relatório.");
                 return;
             }
 
+            const cfg = CONFIG_PAINEIS[id];
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-            const dadosDoDia = dadosGlobais[dataEscolhida];
+            const dadosDoDia = baseTurnos[dataEscolhida];
             const partes = dataEscolhida.split('_');
             const [ano, mes, dia] = partes[0].split('-');
             const nomeTurno = partes[1] === 'T1' ? 'Turno 1 (03:00 - 13:40)' : 'Turno 2 (13:40 - 03:00)';
@@ -412,25 +495,20 @@
             const dataFormatada = `${dia}/${mes}/${ano} (${nomeTurno})`;
             const horaFormatada = dadosDoDia.ultima_atualizacao || '--:--';
 
-            // ==========================================
-            // 1. CABEÇALHO INSTITUCIONAL (PADRÃO PAC)
-            // ==========================================
             doc.setDrawColor(0, 0, 0);
             doc.setLineWidth(0.3);
 
-            // Caixa Esquerda - Logo Pioneiro Alimentos
             doc.rect(10, 10, 34, 20);
             doc.setFont("helvetica", "bolditalic");
             doc.setFontSize(14);
-            doc.setTextColor(27, 54, 156); // Azul Pioneiro
+            doc.setTextColor(27, 54, 156);
             doc.text("Pioneiro", 27, 19, { align: "center" });
 
             doc.setFont("helvetica", "bold");
             doc.setFontSize(7.5);
-            doc.setTextColor(232, 108, 31); // Laranja Alimentos
+            doc.setTextColor(232, 108, 31);
             doc.text("Alimentos", 38, 24, { align: "right" });
 
-            // Caixa Central - Dados da Empresa
             doc.rect(44, 10, 126, 20);
             doc.setTextColor(0, 0, 0);
             doc.setFont("helvetica", "bold");
@@ -442,27 +520,23 @@
             doc.text("RODOVIA PARIGOT DE SOUZA, KM 302,8 – PR 092 – JOAQUIM TÁVORA - PR CEP: 86455-000", 107, 20.5, { align: "center" });
             doc.text("ABATEDOURO FRIGORÍFICO – SIF 1372", 107, 25.5, { align: "center" });
 
-            // Caixa Direita - Código PAC
             doc.rect(170, 10, 30, 20);
             doc.setFontSize(7.5);
             doc.text("PAC 10", 185, 15.5, { align: "center" });
             doc.text("PAC 10.07", 185, 20.5, { align: "center" });
             doc.text("N° Versão: 41", 185, 25.5, { align: "center" });
 
-            // Faixa Azul Claro - Título do Programa
             doc.setFillColor(217, 225, 242);
             doc.rect(10, 32, 190, 6, 'FD');
             doc.setFont("helvetica", "bold");
             doc.setFontSize(8);
             doc.text("PROGRAMA DE AUTOCONTROLE (PAC) - PROCEDIMENTOS SANITÁRIOS DAS OPERAÇÕES", 105, 36, { align: "center" });
 
-            // Faixa Branca - Subtítulo
             doc.rect(10, 38, 190, 6);
             doc.setFont("helvetica", "normal");
             doc.setFontSize(8);
-            doc.text("MONITORAMENTO CONTAMINAÇÕES EM CARCAÇAS", 105, 42, { align: "center" });
+            doc.text(`MONITORAMENTO CONTAMINAÇÕES EM CARCAÇAS - ${cfg.tituloRelatorio.toUpperCase()}`, 105, 42, { align: "center" });
 
-            // Metadados (Data e Última Atualização)
             doc.setFontSize(9.5);
             doc.setTextColor(50, 50, 50);
             doc.setFont("helvetica", "bold");
@@ -477,9 +551,6 @@
 
             let cursorY = 60;
 
-            // ==========================================
-            // 2. TABELA 1: RESUMO DE CONTAMINAÇÕES
-            // ==========================================
             doc.setFont("helvetica", "bold");
             doc.setFontSize(10.5);
             doc.setTextColor(68, 68, 68);
@@ -489,7 +560,7 @@
             let totalGeral = 0;
 
             for (const [chave, valor] of Object.entries(dadosDoDia)) {
-                if (chave !== 'ultima_atualizacao' && chave !== 'logs' && chave !== 'resumo' && chave !== 'Frangos_Hora') {
+                if (!['ultima_atualizacao', 'logs', 'resumo', 'Frangos_Hora'].includes(chave)) {
                     totalGeral += Number(valor) || 0;
                     bodyResumo.push([formatarNome(chave), String(valor)]);
                 }
@@ -502,8 +573,8 @@
                 body: bodyResumo,
                 foot: [['TOTAL GERAL:', String(totalGeral)]],
                 theme: 'grid',
-                headStyles: { fillColor: [179, 36, 0], textColor: 255, fontStyle: 'bold', halign: 'left' },
-                footStyles: { fillColor: [234, 234, 234], textColor: [179, 36, 0], fontStyle: 'bold' },
+                headStyles: { fillColor: cfg.corRGB, textColor: 255, fontStyle: 'bold', halign: 'left' },
+                footStyles: { fillColor: [234, 234, 234], textColor: cfg.corRGB, fontStyle: 'bold' },
                 columnStyles: {
                     0: { cellWidth: 135, halign: 'left' },
                     1: { cellWidth: 55, halign: 'center' }
@@ -524,9 +595,6 @@
 
             cursorY = doc.lastAutoTable.finalY + 10;
 
-            // ==========================================
-            // 3. PREPARAÇÃO DOS DADOS DE LOG E HORA
-            // ==========================================
             const bodyHora = [];
             const bodyLogs = [];
 
@@ -583,9 +651,6 @@
                 bodyLogs.push([{ content: 'Nenhuma ocorrência registrada neste turno.', colSpan: 3, styles: { halign: 'center', textColor: 120 } }]);
             }
 
-            // ==========================================
-            // 4. TABELA 2: AGRUPAMENTO POR HORA
-            // ==========================================
             doc.setFont("helvetica", "bold");
             doc.setFontSize(10.5);
             doc.setTextColor(68, 68, 68);
@@ -614,9 +679,6 @@
 
             cursorY = doc.lastAutoTable.finalY + 10;
 
-            // ==========================================
-            // 5. TABELA 3: HISTÓRICO DETALHADO (LOG)
-            // ==========================================
             if (cursorY > 270) {
                 doc.addPage();
                 cursorY = 15;
@@ -647,9 +709,6 @@
                 }
             });
 
-            // ==========================================
-            // 6. RODAPÉ E PAGINAÇÃO EM TODAS AS PÁGINAS
-            // ==========================================
             const totalPaginas = doc.internal.getNumberOfPages();
             for (let i = 1; i <= totalPaginas; i++) {
                 doc.setPage(i);
@@ -660,7 +719,7 @@
                 doc.text(`Página ${i} de ${totalPaginas}`, 200, 290, { align: "right" });
             }
 
-            doc.save(`Relatorio_Abatedouro_PCC-1B_${dia}-${mes}-${ano}_${turnoArquivo}.pdf`);
+            doc.save(`Relatorio_Abatedouro_${cfg.arquivoSufixo}_${dia}-${mes}-${ano}_${turnoArquivo}.pdf`);
         }
 
         window.onload = inicializarSite;
