@@ -5,17 +5,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitoramento contaminações</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Bibliotecas nativas para geração de PDF vetorial sem limite de páginas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f7f6;
             margin: 0;
             padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - 40px);
         }
 
         .container {
             max-width: 900px;
+            width: 100%;
+            box-sizing: border-box;
             margin: 0 auto;
             background: #fff;
             padding: 30px;
@@ -41,11 +48,18 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 15px;
             background-color: #f9f9f9;
             padding: 15px 20px;
             border-radius: 8px;
             border-left: 5px solid #b32400;
             margin-bottom: 30px;
+        }
+
+        .filtro-grupo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         select {
@@ -54,6 +68,7 @@
             border-radius: 5px;
             border: 1px solid #ccc;
             outline: none;
+            background-color: #fff;
         }
 
         .btn-pdf {
@@ -66,6 +81,7 @@
             border-radius: 5px;
             cursor: pointer;
             transition: 0.3s;
+            white-space: nowrap;
         }
 
         .btn-pdf:hover {
@@ -146,6 +162,92 @@
             font-size: 3px;
             text-anchor: middle;
         }
+
+        footer {
+            margin-top: auto;
+            padding-top: 25px;
+            padding-bottom: 5px;
+            text-align: center;
+            color: #777;
+            font-size: 14px;
+        }
+
+        /* ==========================================
+           RESPONSIVIDADE PARA CELULARES
+           ========================================== */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+                min-height: calc(100vh - 20px);
+            }
+
+            .container {
+                padding: 18px 15px;
+                border-radius: 10px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            p.subtitle {
+                font-size: 14px;
+                margin-bottom: 20px;
+            }
+
+            .barra-topo {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 14px;
+                gap: 12px;
+                margin-bottom: 20px;
+            }
+
+            .filtro-grupo {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
+            }
+
+            select {
+                width: 100%;
+                font-size: 15px;
+                padding: 10px 8px;
+            }
+
+            .btn-pdf {
+                width: 100%;
+                padding: 12px;
+                font-size: 15px;
+            }
+
+            .grid-cards {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+
+            .card {
+                padding: 18px 15px;
+            }
+
+            .card h3 {
+                font-size: 14px;
+            }
+
+            .card .valor {
+                font-size: 34px;
+                margin-top: 10px;
+            }
+
+            .card.hora .valor {
+                font-size: 24px;
+            }
+
+            .circular-chart {
+                width: 110px;
+                height: 110px;
+            }
+        }
     </style>
 </head>
 
@@ -155,8 +257,8 @@
         <p class="subtitle">Monitoramento em Tempo Real - PCC-1B</p>
 
         <div class="barra-topo">
-            <div>
-                <label for="dataSelect" style="color: #444; font-weight: bold;">Filtro: </label>
+            <div class="filtro-grupo">
+                <label for="dataSelect" style="color: #444; font-weight: bold;">Filtro:</label>
                 <select id="dataSelect" onchange="renderizarTela()"></select>
             </div>
 
@@ -167,6 +269,10 @@
 
         <div class="grid-cards" id="containerCards"></div>
     </div>
+
+    <footer>
+        Produzido por Fernando Maciel
+    </footer>
 
     <script>
         const FIREBASE_URL_DADOS = 'https://abaco-62f10-default-rtdb.firebaseio.com/.json';
@@ -291,49 +397,152 @@
         function gerarPDF() {
             const dataEscolhida = document.getElementById('dataSelect').value;
             if (!dataEscolhida || !dadosGlobais[dataEscolhida]) {
-                alert("Sem dados para gerar relatório."); return;
+                alert("Sem dados para gerar relatório.");
+                return;
             }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
             const dadosDoDia = dadosGlobais[dataEscolhida];
             const partes = dataEscolhida.split('_');
             const [ano, mes, dia] = partes[0].split('-');
             const nomeTurno = partes[1] === 'T1' ? 'Turno 1 (03:00 - 13:40)' : 'Turno 2 (13:40 - 03:00)';
+            const turnoArquivo = partes[1] === 'T1' ? 'Turno1' : 'Turno2';
             const dataFormatada = `${dia}/${mes}/${ano} (${nomeTurno})`;
             const horaFormatada = dadosDoDia.ultima_atualizacao || '--:--';
 
-            let linhasTabelaResumo = '';
+            // ==========================================
+            // 1. CABEÇALHO INSTITUCIONAL (PADRÃO PAC)
+            // ==========================================
+            doc.setDrawColor(0, 0, 0);
+            doc.setLineWidth(0.3);
+
+            // Caixa Esquerda - Logo Pioneiro Alimentos
+            doc.rect(10, 10, 34, 20);
+            doc.setFont("helvetica", "bolditalic");
+            doc.setFontSize(14);
+            doc.setTextColor(27, 54, 156); // Azul Pioneiro
+            doc.text("Pioneiro", 27, 19, { align: "center" });
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(7.5);
+            doc.setTextColor(232, 108, 31); // Laranja Alimentos
+            doc.text("Alimentos", 38, 24, { align: "right" });
+
+            // Caixa Central - Dados da Empresa
+            doc.rect(44, 10, 126, 20);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(8.5);
+            doc.text("FRANGOS PIONEIRO – INDÚSTRIA E COMÉRCIO DE ALIMENTOS LTDA.", 107, 15.5, { align: "center" });
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(7);
+            doc.text("RODOVIA PARIGOT DE SOUZA, KM 302,8 – PR 092 – JOAQUIM TÁVORA - PR CEP: 86455-000", 107, 20.5, { align: "center" });
+            doc.text("ABATEDOURO FRIGORÍFICO – SIF 1372", 107, 25.5, { align: "center" });
+
+            // Caixa Direita - Código PAC
+            doc.rect(170, 10, 30, 20);
+            doc.setFontSize(7.5);
+            doc.text("PAC 10", 185, 15.5, { align: "center" });
+            doc.text("PAC 10.07", 185, 20.5, { align: "center" });
+            doc.text("N° Versão: 41", 185, 25.5, { align: "center" });
+
+            // Faixa Azul Claro - Título do Programa
+            doc.setFillColor(217, 225, 242);
+            doc.rect(10, 32, 190, 6, 'FD');
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(8);
+            doc.text("PROGRAMA DE AUTOCONTROLE (PAC) - PROCEDIMENTOS SANITÁRIOS DAS OPERAÇÕES", 105, 36, { align: "center" });
+
+            // Faixa Branca - Subtítulo
+            doc.rect(10, 38, 190, 6);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.text("MONITORAMENTO CONTAMINAÇÕES EM CARCAÇAS", 105, 42, { align: "center" });
+
+            // Metadados (Data e Última Atualização)
+            doc.setFontSize(9.5);
+            doc.setTextColor(50, 50, 50);
+            doc.setFont("helvetica", "bold");
+            doc.text("Data do Relatório: ", 10, 52);
+            doc.setFont("helvetica", "normal");
+            doc.text(dataFormatada, 40, 52);
+
+            doc.setFont("helvetica", "bold");
+            doc.text("Última Atualização: ", 140, 52);
+            doc.setFont("helvetica", "normal");
+            doc.text(horaFormatada, 173, 52);
+
+            let cursorY = 60;
+
+            // ==========================================
+            // 2. TABELA 1: RESUMO DE CONTAMINAÇÕES
+            // ==========================================
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10.5);
+            doc.setTextColor(68, 68, 68);
+            doc.text("1. Resumo de Contaminações", 10, cursorY);
+
+            const bodyResumo = [];
             let totalGeral = 0;
 
             for (const [chave, valor] of Object.entries(dadosDoDia)) {
                 if (chave !== 'ultima_atualizacao' && chave !== 'logs' && chave !== 'resumo' && chave !== 'Frangos_Hora') {
                     totalGeral += Number(valor) || 0;
-                    linhasTabelaResumo += `
-                        <tr style="page-break-inside: avoid;">
-                            <td style="padding: 10px; border: 1px solid #ddd; font-size: 14px;">${formatarNome(chave)}</td>
-                            <td style="padding: 10px; border: 1px solid #ddd; font-size: 14px; text-align: center;">${valor}</td>
-                        </tr>
-                    `;
+                    bodyResumo.push([formatarNome(chave), String(valor)]);
                 }
             }
 
-            let linhasTabelaLogs = '';
-            let linhasTabelaHora = '';
+            doc.autoTable({
+                startY: cursorY + 3,
+                margin: { left: 10, right: 10 },
+                head: [['Tipo de Contaminação', 'Total Detectado']],
+                body: bodyResumo,
+                foot: [['TOTAL GERAL:', String(totalGeral)]],
+                theme: 'grid',
+                headStyles: { fillColor: [179, 36, 0], textColor: 255, fontStyle: 'bold', halign: 'left' },
+                footStyles: { fillColor: [234, 234, 234], textColor: [179, 36, 0], fontStyle: 'bold' },
+                columnStyles: {
+                    0: { cellWidth: 135, halign: 'left' },
+                    1: { cellWidth: 55, halign: 'center' }
+                },
+                didParseCell: function (data) {
+                    if (data.section === 'head' && data.column.index === 1) {
+                        data.cell.styles.halign = 'center';
+                    }
+                    if (data.section === 'foot' && data.column.index === 0) {
+                        data.cell.styles.halign = 'right';
+                        data.cell.styles.textColor = [0, 0, 0];
+                    }
+                    if (data.section === 'foot' && data.column.index === 1) {
+                        data.cell.styles.halign = 'center';
+                    }
+                }
+            });
+
+            cursorY = doc.lastAutoTable.finalY + 10;
+
+            // ==========================================
+            // 3. PREPARAÇÃO DOS DADOS DE LOG E HORA
+            // ==========================================
+            const bodyHora = [];
+            const bodyLogs = [];
 
             if (dadosDoDia.logs) {
                 const arrayLogs = Object.values(dadosDoDia.logs).sort((a, b) => a.hora.localeCompare(b.hora));
                 let resumoPorHora = {};
 
                 arrayLogs.forEach(log => {
-                    linhasTabelaLogs += `
-                        <tr style="page-break-inside: avoid;">
-                            <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 13px;">${log.hora}</td>
-                            <td style="padding: 8px; border: 1px solid #ddd; font-size: 13px;">${formatarNome(log.doenca)}</td>
-                            <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 13px;">${log.frangos_hora || 0}</td>
-                        </tr>
-                    `;
+                    bodyLogs.push([
+                        log.hora,
+                        formatarNome(log.doenca),
+                        String(log.frangos_hora || 0)
+                    ]);
 
                     let horaBase = log.hora.split(':')[0];
-                    let qtd = log.quantidade || 1;
+                    let qtd = Number(log.quantidade) || 1;
                     let vel = Number(log.frangos_hora || 0);
 
                     if (!resumoPorHora[horaBase]) {
@@ -349,137 +558,109 @@
 
                 for (let horaStr of Object.keys(resumoPorHora).sort()) {
                     let dadosHora = resumoPorHora[horaStr];
-                    let horaAtualNum = parseInt(horaStr);
-                    let horaSeguinte = (horaAtualNum + 1).toString().padStart(2, '0');
+                    let horaAtualNum = parseInt(horaStr, 10);
+                    let horaSeguinte = ((horaAtualNum + 1) % 24).toString().padStart(2, '0');
                     let faixaHorario = `Das ${horaStr}:00 às ${horaSeguinte}:00`;
 
                     let mediaFrangos = dadosHora.contagemEventos > 0
                         ? Math.round(dadosHora.somaVelocidade / dadosHora.contagemEventos)
                         : 0;
 
-                    let porcentagem = mediaFrangos > 0
-                        ? ((dadosHora.contaminacoes / mediaFrangos) * 100).toFixed(2).replace('.', ',')
-                        : "0,00";
+                    let taxaNum = mediaFrangos > 0 ? (dadosHora.contaminacoes / mediaFrangos) * 100 : 0;
+                    let porcentagem = taxaNum.toFixed(2).replace('.', ',') + '%';
 
-                    let corPorcentagem = parseFloat(porcentagem.replace(',', '.')) > 10 ? '#b32400' : '#28a745';
-
-                    linhasTabelaHora += `
-                        <tr style="page-break-inside: avoid;">
-                            <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 13px;">${faixaHorario}</td>
-                            <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 13px;">${dadosHora.contaminacoes}</td>
-                            <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 13px;">${mediaFrangos}</td>
-                            <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-size: 13px; font-weight: bold; color: ${corPorcentagem};">${porcentagem}%</td>
-                        </tr>
-                    `;
+                    bodyHora.push([
+                        faixaHorario,
+                        String(dadosHora.contaminacoes),
+                        String(mediaFrangos),
+                        porcentagem
+                    ]);
                 }
             }
 
-            if (linhasTabelaLogs === '') {
-                linhasTabelaLogs = '<tr><td colspan="3" style="padding: 15px; text-align: center; color: #777;">Nenhuma ocorrência registrada neste turno.</td></tr>';
-                linhasTabelaHora = '<tr><td colspan="4" style="padding: 15px; text-align: center; color: #777;">Sem dados para gerar média por hora.</td></tr>';
+            if (bodyLogs.length === 0) {
+                bodyHora.push([{ content: 'Sem dados para gerar média por hora.', colSpan: 4, styles: { halign: 'center', textColor: 120 } }]);
+                bodyLogs.push([{ content: 'Nenhuma ocorrência registrada neste turno.', colSpan: 3, styles: { halign: 'center', textColor: 120 } }]);
             }
 
-            const relatorioHTML = `
-                <div style="width: 100%; box-sizing: border-box; padding: 0; font-family: 'Helvetica', 'Arial', sans-serif; color: #000; background: white;">
-                    
-                    <!-- Cabeçalho Institucional (Padrão PAC) -->
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; border: 1px solid #000;">
-                        <tr>
-                            <td style="width: 18%; border: 1px solid #000; text-align: center; vertical-align: middle; padding: 8px;">
-                                <div style="font-family: Arial, sans-serif; font-weight: bold; font-style: italic; font-size: 20px; color: #1b369c; line-height: 1;">
-                                    Pioneiro
-                                </div>
-                                <div style="font-family: Arial, sans-serif; font-size: 9px; color: #e86c1f; text-align: right; padding-right: 8px; font-weight: bold;">
-                                    Alimentos
-                                </div>
-                            </td>
-                            <td style="width: 66%; border: 1px solid #000; text-align: center; vertical-align: middle; padding: 6px 10px; line-height: 1.35;">
-                                <div style="font-size: 12px; font-weight: bold;">FRANGOS PIONEIRO – INDÚSTRIA E COMÉRCIO DE ALIMENTOS LTDA.</div>
-                                <div style="font-size: 10px;">RODOVIA PARIGOT DE SOUZA, KM 302,8 – PR 092 – JOAQUIM TÁVORA - PR CEP: 86455-000</div>
-                                <div style="font-size: 10px;">ABATEDOURO FRIGORÍFICO – SIF 1372</div>
-                            </td>
-                            <td style="width: 16%; border: 1px solid #000; text-align: center; vertical-align: middle; padding: 6px; font-size: 10px; line-height: 1.4;">
-                                <div>PAC 10</div>
-                                <div>PAC 10.07</div>
-                                <div>N° Versão: 41</div>
-                            </td>
-                        </tr>
-                    </table>
+            // ==========================================
+            // 4. TABELA 2: AGRUPAMENTO POR HORA
+            // ==========================================
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10.5);
+            doc.setTextColor(68, 68, 68);
+            doc.text("2. Agrupamento por Hora", 10, cursorY);
 
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid #000;">
-                        <tr>
-                            <td style="border: 1px solid #000; text-align: center; padding: 4px; font-size: 11px; font-weight: bold; background-color: #d9e1f2;">
-                                PROGRAMA DE AUTOCONTROLE (PAC) - PROCEDIMENTOS SANITÁRIOS DAS OPERAÇÕES
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="border: 1px solid #000; text-align: center; padding: 4px; font-size: 11px;">
-                                MONITORAMENTO CONTAMINAÇÕES EM CARCAÇAS
-                            </td>
-                        </tr>
-                    </table>
-                    
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 13px; color: #333;">
-                        <div><strong>Data do Relatório:</strong> ${dataFormatada}</div>
-                        <div><strong>Última Atualização:</strong> ${horaFormatada}</div>
-                    </div>
+            doc.autoTable({
+                startY: cursorY + 3,
+                margin: { left: 10, right: 10 },
+                head: [['Faixa de Horário', 'Total Contaminado', 'Média Frangos/Hora', 'Taxa (%)']],
+                body: bodyHora,
+                theme: 'grid',
+                headStyles: { fillColor: [68, 68, 68], textColor: 255, fontStyle: 'bold', halign: 'center' },
+                columnStyles: {
+                    0: { cellWidth: 55, halign: 'center' },
+                    1: { cellWidth: 45, halign: 'center' },
+                    2: { cellWidth: 50, halign: 'center' },
+                    3: { cellWidth: 40, halign: 'center', fontStyle: 'bold' }
+                },
+                didParseCell: function (data) {
+                    if (data.section === 'body' && data.column.index === 3 && data.cell.raw && data.cell.raw.includes('%')) {
+                        const val = parseFloat(data.cell.raw.replace('%', '').replace(',', '.'));
+                        data.cell.styles.textColor = val > 10 ? [179, 36, 0] : [40, 167, 69];
+                    }
+                }
+            });
 
-                    <h4 style="margin-bottom: 10px; color: #444;">1. Resumo de Contaminações</h4>
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-                        <thead>
-                            <tr>
-                                <th style="background-color: #b32400; color: white; padding: 10px; font-size: 14px; border: 1px solid #991f00; text-align: left; width: 70%;">Tipo de Contaminação</th>
-                                <th style="background-color: #b32400; color: white; padding: 10px; font-size: 14px; border: 1px solid #991f00; text-align: center; width: 30%;">Total Detectado</th>
-                            </tr>
-                        </thead>
-                        <tbody>${linhasTabelaResumo}</tbody>
-                        <tfoot>
-                            <tr style="font-weight: bold; background-color: #eaeaea; page-break-inside: avoid;">
-                                <td style="text-align: right; padding: 10px; border-top: 2px solid #666; font-size: 15px;">TOTAL GERAL:</td>
-                                <td style="text-align: center; padding: 10px; border-top: 2px solid #666; font-size: 15px; color: #b32400;">${totalGeral}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
+            cursorY = doc.lastAutoTable.finalY + 10;
 
-                    <h4 style="margin-bottom: 10px; color: #444;">2. Agrupamento por Hora</h4>
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-                        <thead>
-                            <tr style="page-break-inside: avoid;">
-                                <th style="background-color: #444; color: white; padding: 8px; font-size: 13px; border: 1px solid #333; text-align: center; width: 30%;">Faixa de Horário</th>
-                                <th style="background-color: #444; color: white; padding: 8px; font-size: 13px; border: 1px solid #333; text-align: center; width: 25%;">Total Contaminado</th>
-                                <th style="background-color: #444; color: white; padding: 8px; font-size: 13px; border: 1px solid #333; text-align: center; width: 25%;">Média Frangos/Hora</th>
-                                <th style="background-color: #444; color: white; padding: 8px; font-size: 13px; border: 1px solid #333; text-align: center; width: 20%;">Taxa (%)</th>
-                            </tr>
-                        </thead>
-                        <tbody>${linhasTabelaHora}</tbody>
-                    </table>
+            // ==========================================
+            // 5. TABELA 3: HISTÓRICO DETALHADO (LOG)
+            // ==========================================
+            if (cursorY > 270) {
+                doc.addPage();
+                cursorY = 15;
+            }
 
-                    <h4 style="margin-bottom: 10px; color: #444;">3. Histórico Detalhado (Log de Eventos)</h4>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="page-break-inside: avoid;">
-                                <th style="background-color: #444; color: white; padding: 8px; font-size: 13px; border: 1px solid #333; text-align: center; width: 20%;">Hora</th>
-                                <th style="background-color: #444; color: white; padding: 8px; font-size: 13px; border: 1px solid #333; text-align: left; width: 55%;">Contaminação Registrada</th>
-                                <th style="background-color: #444; color: white; padding: 8px; font-size: 13px; border: 1px solid #333; text-align: center; width: 25%;">Frangos por Hora</th>
-                            </tr>
-                        </thead>
-                        <tbody>${linhasTabelaLogs}</tbody>
-                    </table>
-                    
-                    <div style="margin-top: 40px; text-align: center; font-size: 11px; color: #888; page-break-inside: avoid;">
-                        Documento gerado automaticamente pelo Sistema Supervisório.
-                    </div>
-                </div>
-            `;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10.5);
+            doc.setTextColor(68, 68, 68);
+            doc.text("3. Histórico Detalhado (Log de Eventos)", 10, cursorY);
 
-            const opcoes = {
-                margin: 10, filename: `Relatorio_Abatedouro_PCC-1B_${dia}-${mes}-${ano}_${nomeTurno}.pdf`,
-                image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak: { avoid: 'tr' }
-            };
+            doc.autoTable({
+                startY: cursorY + 3,
+                margin: { left: 10, right: 10, bottom: 15 },
+                head: [['Hora', 'Contaminação Registrada', 'Frangos por Hora']],
+                body: bodyLogs,
+                theme: 'grid',
+                headStyles: { fillColor: [68, 68, 68], textColor: 255, fontStyle: 'bold' },
+                styles: { fontSize: 8.5, cellPadding: 2 },
+                columnStyles: {
+                    0: { cellWidth: 35, halign: 'center' },
+                    1: { cellWidth: 110, halign: 'left' },
+                    2: { cellWidth: 45, halign: 'center' }
+                },
+                didParseCell: function (data) {
+                    if (data.section === 'head' && (data.column.index === 0 || data.column.index === 2)) {
+                        data.cell.styles.halign = 'center';
+                    }
+                }
+            });
 
-            html2pdf().set(opcoes).from(relatorioHTML).save();
+            // ==========================================
+            // 6. RODAPÉ E PAGINAÇÃO EM TODAS AS PÁGINAS
+            // ==========================================
+            const totalPaginas = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= totalPaginas; i++) {
+                doc.setPage(i);
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(8);
+                doc.setTextColor(136, 136, 136);
+                doc.text("Documento gerado automaticamente pelo Sistema Supervisório.", 10, 290);
+                doc.text(`Página ${i} de ${totalPaginas}`, 200, 290, { align: "right" });
+            }
+
+            doc.save(`Relatorio_Abatedouro_PCC-1B_${dia}-${mes}-${ano}_${turnoArquivo}.pdf`);
         }
 
         window.onload = inicializarSite;
